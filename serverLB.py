@@ -37,40 +37,40 @@ dbBasePort = config['db-base-port']
 @route('/rating/<entity>', method='PUT')
 def put_rating(entity):
 
-    # Check to make sure JSON is ok
-    mimetype = mimeparse.best_match(['application/json'], request.headers.get('Accept'))
-    if not mimetype: return abort(406)
+    	# Check to make sure JSON is ok
+    	mimetype = mimeparse.best_match(['application/json'], request.headers.get('Accept'))
+    	if not mimetype: return abort(406)
 
-    # Check to make sure the data we're getting is JSON
-    if request.headers.get('Content-Type') != 'application/json': return abort(415)
+	# Check to make sure the data we're getting is JSON
+	if request.headers.get('Content-Type') != 'application/json': return abort(415)
 
-    response.headers.append('Content-Type', mimetype)
+    	response.headers.append('Content-Type', mimetype)
 
-    # Parse the request
-    data = json.load(request.body)
-    rating = data.get('rating')
-    clock = VectorClock.fromDict(data.get('clock'))
+    	# Parse the request
+    	data = json.load(request.body)
+    	rating = data.get('rating')
+    	clock = VectorClock.fromDict(data.get('clock'))
 
-    # Basic sanity checks on the rating
-    if isinstance(rating, int): rating = float(rating)
-    if not isinstance(rating, float): return abort(400)
+    	# Basic sanity checks on the rating
+    	if isinstance(rating, int): rating = float(rating)
+    	if not isinstance(rating, float): return abort(400)
 
-    # YOUR CODE HERE
-    # HASH THE ENTITY TO DETERMINE ITS SHARD
-    # PUT THE PORT FOR THE CORRECT SHARD IN url below
-    url = 'http://localhost:'+str(dbBasePort)+'/rating/'+entity
+    	# YOUR CODE HERE
+    	# HASH THE ENTITY TO DETERMINE ITS SHARD
+    	# PUT THE PORT FOR THE CORRECT SHARD IN url below
+    	url = 'http://localhost:'+str(dbBasePort)+'/rating/'+entity
 
-    # RESUME BOILERPLATE CODE...
-    # Update the rating
-    res = requests.put(url,
-                       data=json.dumps({'rating': rating,
-                                        'clock': clock.asDict()}),
-                       headers={'content-type': 'application/json'})
+    	# RESUME BOILERPLATE CODE...
+    	# Update the rating
+    	res = requests.put(url,
+        		data=json.dumps({'rating': rating,
+                                        'clocks': clock.asDict()}),
+                       	headers={'content-type': 'application/json'})
 
-    # Return the new rating for the entity
-    return {
-            "rating": res.json()['rating']
-    }
+    	# Return the new rating for the entity
+    	return {
+        	"rating": res.json()['rating']
+    	}
 
 
 # Get the aggregate rating of entity
@@ -86,19 +86,21 @@ def put_rating(entity):
 #   { rating: 5, choices: [5], clocks: [{c1: 3, c4: 10}] }
 @route('/rating/<entity>', method='GET')
 def get_rating(entity):
-    # YOUR CODE HERE
-    # DETERMINE THE RIGHT DB INSTANCE TO CALL,
-    # DEPENDING UPON WHETHER THE GET IS STRONGLY OR WEAKLY CONSISTENT
-    # ASSIGN THE ENDPOINT TO url
-    url = 'http://localhost:3000/rating/strawberry-cream-white-tea'
-
-    # RESUME BOILERPLATE
-    curdata = requests.get(url).json()
-    return {
-            "rating":  curdata['rating'],
-            "choices": curdata['choices'],
-            "clocks":  curdata['clocks']
-    }
+    	# YOUR CODE HERE
+    	# DETERMINE THE RIGHT DB INSTANCE TO CALL,
+    	# DEPENDING UPON WHETHER THE GET IS STRONGLY OR WEAKLY CONSISTENT
+    	# ASSIGN THE ENDPOINT TO url
+    	url = 'http://localhost:3000/rating/%s' % entity  #strawberry-cream-white-tea'
+    	print "[LB:get_rating]url:",url
+	
+    	# RESUME BOILERPLATE
+    	curdata = requests.get(url).json() 
+	print "[LB:get_rating]curdate:",curdata
+    	return {
+            	"rating":  curdata['rating'],
+        	"choices": curdata['choices'],
+            	"clocks":  curdata['clocks']
+    	}
 
 # Delete the rating information for entity
 # This can be accessed using:
@@ -107,12 +109,12 @@ def get_rating(entity):
 #   { rating: null }
 @route('/rating/<entity>', method='DELETE')
 def delete_rating(entity):
-    # DONE---NOTHING TO CHANGE
-    dbprimary = dbBasePort + hashEntity(entity, ndb)
-    url = 'http://localhost:'+str(dbprimary)+'/rating/'+entity
-    resp = requests.delete(url)
-    return resp
+    	# DONE---NOTHING TO CHANGE
+    	dbprimary = dbBasePort + hashEntity(entity, ndb)
+    	url = 'http://localhost:'+str(dbprimary)+'/rating/'+entity
+    	resp = requests.delete(url)
+    	return resp
 
 # Fire the engines
 if __name__ == '__main__':
-    run(host='0.0.0.0', port=os.getenv('PORT', port), quiet=True)
+    	run(host='0.0.0.0', port=os.getenv('PORT', port), quiet=True)

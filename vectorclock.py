@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 '''
-        Vector clock class
+	Vector clock class
     By  Ted Kirkpatrick
     Extension of original version by David Drysdale, included in:
     https://github.com/daviddrysdale/pynamo
     Documentation at http://lurklurk.org/pynamo/pynamo.html
-
+    
     License: Version 2 of GPL: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 '''
 
@@ -30,6 +30,7 @@ class VectorClock(object):
     def fromDict(cls, dct):
         """ Create a VectorClock from a dictionary. """
         vc = VectorClock()
+	print "[fromDict]dct:", dct
         for node, count in dct.iteritems():
             vc.update(node, count)
         return vc
@@ -44,16 +45,37 @@ class VectorClock(object):
                 return False
         return True
 
+    def asItemString(self):
+	return "%s" % ", ".join(["'%s':%d" % (node, self.clock[node])
+                                   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])
     def __str__(self):
+	#print "_str_"
         return "{%s}" % ", ".join(["%s:%d" % (node, self.clock[node])
-                                   for node in sorted(self.clock.keys())])
+                                   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])
 
     def __repr__(self):
+	#print "_repr
         """ Represent the clock in JSON style, with the keys in double quotes. """
         return "{%s}" % ", ".join(["\"%s\":%d" % (node, self.clock[node])
-                                   for node in sorted(self.clock.keys())])
+                                   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])
+    def asJsonDict(self):
+	""" Represent the clock in JSON style, with the keys in double quotes. """
+        return "{%s}" % ", ".join(["\"%s\":%d" % (node, self.clock[node])
+                                   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])
+    def asSortedDict(self):
+        return eval(self.asJsonDict()) 
+   
+    def asSortedList(self): # [{"c4": 100}, {"c5": 6}, {"c23": 12}]
+        """ Represent the clock in JSON style, with the keys in double quotes. """
+        return "[{%s}]" % ", ".join(["\"%s\":%d" % (node, self.clock[node])
+ 				   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])		
+    
+    def asSortedListSeperate(self): # [{"c4": 100}, {"c5": 6}, {"c23": 12}]
+        """ Represent the clock in JSON style, with the keys in double quotes. """
+        return "[%s]" % ", ".join(["{\"%s\":%d}" % (node, self.clock[node])
+                                   for node in sorted(self.clock.keys(), key=lambda item:int(item[1:]))  ])
 
-# PART comparisons
+#ART comparisons
     # Comparison operations. Vector clocks are partially ordered, but not totally ordered.
     def __eq__(self, other):
         return self.clock == other.clock
@@ -79,6 +101,59 @@ class VectorClock(object):
 
     def __ge__(self, other):
         return (self == other) or (self > other)
+
+# PART coalesce
+# CAUTION--HAS BUG AND IS MORE COMPLEX THAN NEEDED FOR THIS ASSIGNMENT
+    @classmethod
+    def coalesce(cls, vcs):
+        """Coalesce a container of VectorClock objects.
+
+        The result is a list of VectorClocks; each input VectorClock is a direct
+        ancestor of one of the results, and no result entry is a direct ancestor
+        of any other result entry."""
+        results = []
+        for vc in vcs:
+            # See if this vector-clock subsumes or is subsumed by anything already present
+            subsumed = False
+            for ii, result in enumerate(results):
+                if vc <= result:  # subsumed by existing answer
+                    subsumed = True
+                    break
+                if result < vc:  # subsumes existing answer so replace it
+                    results[ii] = copy.deepcopy(vc)
+                    subsumed = True
+                    break
+            if not subsumed:
+                results.append(copy.deepcopy(vc))
+        return results
+
+# PART coalesce2
+# CAUTION--HAS BUG AND IS MORE COMPLEX THAN NEEDED FOR THIS ASSIGNMENT
+    @classmethod
+    def coalesce2(cls, vcs):
+        """Coalesce a container of (object, VectorClock) tuples.
+
+        The result is a list of (object, VectorClock) tuples; each input
+        VectorClock is a direct ancestor of one of the results, and no result
+        entry is a direct ancestor of any other result entry."""
+        results = []
+        for obj, vc in vcs:
+            if vc is None:  # Treat None as empty VectorClock
+                vc = VectorClock()
+            # See if this vector-clock subsumes or is subsumed by anything already present
+            subsumed = False
+            for ii, (resultobj, resultvc) in enumerate(results):
+                if vc <= resultvc:  # subsumed by existing answer
+                    subsumed = True
+                    break
+
+                if resultvc < vc:  # subsumes existing answer so replace it
+                    results[ii] = (obj, copy.deepcopy(vc))
+                    subsumed = True
+                    break
+            if not subsumed:
+                results.append((obj, copy.deepcopy(vc)))
+        return results
 
 # PART converge
     @classmethod

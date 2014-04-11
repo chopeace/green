@@ -237,9 +237,11 @@ def get(id, ec=False, port=lb_base):
     except:
         rating = data['rating']
 
-    choices = data['choices']
+    choices = json.loads(data['choices'])
     #TODO: Handle return of malformed vector clock
-    clocks = data['clocks']
+    #clocks = data['clocks']
+    clocks = json.load(StringIO.StringIO(data['clocks']))
+    #print "     ------ [get(id) function]", clocks
     return rating, choices, [VectorClock.fromDict(vcstr) for vcstr in clocks]
 
 def put(id, rating, clock, port=lb_base):
@@ -252,6 +254,8 @@ def result(r):
     output.flush()
 
 def testResult(result, rgot, rexp, choicesgot, choicesexp, clocksgot, clocksexp, entity=None):
+    print "[test Result]result:" , result
+
     if entity == None:
         result({ 'type': 'EXPECT_RATING', 'got': rgot, 'expected': rexp})
         result({ 'type': 'EXPECT_CHOICES', 'got': choicesgot, 'expected': choicesexp })
@@ -366,9 +370,14 @@ def simple(result):
     rating  = 5
     time = 1
     cv = VectorClock().update('c0', time)
+    print "----------- begin -------------------------------------\n"
     put(ITEM, rating, cv)
-    r, choices, clocks = get(ITEM)
+    print "     ------ did put ", ITEM,rating,cv, "\n"
+    r, choices, clocks = get(ITEM) 
+    print "     ------ did get ", r,choices,clocks, "\n"
+    	
     testResult(result, r, rating, choices, [rating], clocks, [cv])
+    print "     ------ did test result ", result,"\n"
 
 @test()
 def simpleEv(result):
