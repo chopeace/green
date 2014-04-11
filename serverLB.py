@@ -6,7 +6,7 @@ import sys
 import time
 import math
 import json
-import random
+import random,hashlib
 import string
 
 # Libraries that have to have been installed by pip
@@ -49,7 +49,7 @@ def put_rating(entity):
     	# Parse the request
     	data = json.load(request.body)
     	rating = data.get('rating')
-    	clock = VectorClock.fromDict(data.get('clock'))
+    	clock = VectorClock.fromDict(data.get('clocks'))
 
     	# Basic sanity checks on the rating
     	if isinstance(rating, int): rating = float(rating)
@@ -58,19 +58,25 @@ def put_rating(entity):
     	# YOUR CODE HERE
     	# HASH THE ENTITY TO DETERMINE ITS SHARD
     	# PUT THE PORT FOR THE CORRECT SHARD IN url below
-    	url = 'http://localhost:'+str(dbBasePort)+'/rating/'+entity
-
+	shard_index = hashAndModulo(entity)
+    	url = 'http://localhost:'+str(dbBasePort+shard_index)+'/rating/'+entity
     	# RESUME BOILERPLATE CODE...
     	# Update the rating
     	res = requests.put(url,
         		data=json.dumps({'rating': rating,
                                         'clocks': clock.asDict()}),
-                       	headers={'content-type': 'application/json'})
+                       	headers={'content-type': 'application/json'}, params = {'consistency':'weak'})
 
     	# Return the new rating for the entity
     	return {
         	"rating": res.json()['rating']
     	}
+
+def hashAndModulo(entity):
+        key = '/rating/'+entity
+        hash_hex = hashlib.md5(key).hexdigest()
+        modulo_hash = (int(hash_hex,16)) % int(ndb)
+        return modulo_hash
 
 
 # Get the aggregate rating of entity
@@ -90,11 +96,17 @@ def get_rating(entity):
     	# DETERMINE THE RIGHT DB INSTANCE TO CALL,
     	# DEPENDING UPON WHETHER THE GET IS STRONGLY OR WEAKLY CONSISTENT
     	# ASSIGN THE ENDPOINT TO url
-    	url = 'http://localhost:3000/rating/%s' % entity  #strawberry-cream-white-tea'
+	headers = {'Accept': 'application/json'}
+	randomInt = random.randint(1,ndb)
+    	url = 'http://localhost:%d/rating/%s' % (randomInt+dbBasePort , entity)  #strawberry-cream-white-tea'
     	print "[LB:get_rating]url:",url
-	
+
+	response = requests.get(url, params={'consistency': 'weak'})
+
+	print "***********       [get rating] response :", response.text
     	# RESUME BOILERPLATE
     	curdata = requests.get(url).json() 
+	
 	print "[LB:get_rating]curdate:",curdata
     	return {
             	"rating":  curdata['rating'],

@@ -220,6 +220,7 @@ def get(id, ec=False, port=lb_base):
     """
     headers = { 'Accept': 'application/json' }
     url = endpoint(id, port)
+    print '^^^',ec
     try:
         if ec:
             response = requests.get(url, headers=headers, params={'consistency': 'weak'})
@@ -246,7 +247,7 @@ def get(id, ec=False, port=lb_base):
 
 def put(id, rating, clock, port=lb_base):
     headers = { 'Accept': 'application/json', 'Content-type': 'application/json' }
-    data = json.dumps({ 'rating': rating, 'clock': clock.clock })
+    data = json.dumps({ 'rating': rating, 'clocks': clock.clock })
     resp = requests.put(endpoint(id, port), headers=headers, data=data)
 
 def result(r):
